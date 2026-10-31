@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SeptiSense Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#eef3f2;--card:#fff;--ink:#14282b;--muted:#5b7073;--line:#d3dedc;
+--hr:#1e8a4c;--spo2:#0e7fa8;--temp:#c46a12;--low:#1e8a4c;--medium:#b87d00;--high:#c4372b;--off:#8a9799;--head:#14282b}
+:root[data-theme=dark]{--bg:#0d1a1c;--card:#15272a;--ink:#e6f0ef;--muted:#9db3b6;--line:#2b4448;--head:#0a1213;--hr:#3fbf78;--spo2:#42b4dc;--temp:#e8933a;--low:#3fbf78;--medium:#e0a82e;--high:#ef6a5e}
+:root[data-theme=dark] .banner.warn{background:#4a3410;color:#ffd9a0}:root[data-theme=dark] .banner.err{background:#4d1a15;color:#ffc9c3}
+:root[data-theme=dark] input{background:#0d1a1c;color:var(--ink)}:root[data-theme=dark] .tag.bad{background:#4d1a15;color:#ffc9c3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;padding:18px 24px;background:var(--head);color:#fff}
+h1{margin:0;font-size:24px;letter-spacing:.2px}
+.sub{margin:0;color:#a9bfc2;font-size:13px}
+h2{margin:0 0 10px;font-size:16px}
+.pill{padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;background:var(--off);color:#fff}
+.pill.on{background:var(--low)}.pill.off{background:var(--high)}
+.banner{margin:14px 24px 0;padding:10px 14px;border-radius:6px;font-weight:600}
+.banner.warn{background:#fdebd0;color:#7a4300}.banner.err{background:#f9d6d2;color:#7d1d14}
+main{display:grid;gap:16px;padding:16px 24px 24px;grid-template-columns:repeat(12,1fr)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+.risk{grid-column:span 4;border-top:6px solid var(--off)}
+.risk[data-level=low]{border-top-color:var(--low)}.risk[data-level=medium]{border-top-color:var(--medium)}.risk[data-level=high]{border-top-color:var(--high)}
+.big{font-size:64px;font-weight:700;line-height:1}
+.risk-detail{margin-top:8px;font-size:13px;color:var(--muted)}
+.risk-detail strong{color:var(--ink)}
+.risk-threshold{margin-top:6px;font-size:13px;font-weight:600}
+.risk[data-level=low] .big{color:var(--low)}.risk[data-level=medium] .big{color:var(--medium)}.risk[data-level=high] .big{color:var(--high)}
+.gauge{height:10px;background:linear-gradient(90deg,var(--low),var(--medium),var(--high));border-radius:5px;position:relative;margin:14px 0 8px}
+.gauge i{position:absolute;top:-4px;width:4px;height:18px;background:var(--ink);border-radius:2px;left:0;transition:left .5s}
+.vitals{grid-column:span 8;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.vital{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:8px;padding:14px 16px}
+.vital .lbl{color:var(--muted);font-size:13px}
+.vital .val{font-size:44px;font-weight:700;color:var(--c);line-height:1.1}
+.vital .val small{font-size:15px;font-weight:500;color:var(--muted)}
+.vital .q{font-size:12px;color:var(--muted)}.vital .q.bad{color:var(--high);font-weight:600}
+.chart{grid-column:span 4;min-width:0}.chartbox{position:relative;height:200px;width:100%}
+.alerts{grid-column:span 8}.settings{grid-column:span 4}.about{grid-column:span 12}.model{grid-column:span 12}.notif{grid-column:span 12}
+header button{margin:0}.hbtns{display:flex;gap:10px;align-items:center}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.mhead{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.mhead h2{margin:0}.tag{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
+.tag.bad{background:#f9d6d2;border-color:#e3a39c;color:#7d1d14}
+.fgroup{margin-top:14px}.fgroup h3{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600}
+.fgrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.feat{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:6px;padding:6px 10px;background:var(--bg)}
+.feat .n{font-size:12px;color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace}
+.feat .v{font-size:20px;font-weight:600;line-height:1.2}.feat .v.na{color:var(--off);font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600}
+label{display:block;margin:8px 0 2px;font-size:13px;color:var(--muted)}
+input{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit}
+button{margin-top:12px;padding:8px 14px;border:0;border-radius:6px;background:var(--head);color:#fff;border:1px solid var(--line);font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--spo2);outline-offset:2px}
+.note{color:var(--muted);font-size:13px}
+@media(max-width:900px){.risk,.vitals,.chart,.alerts,.settings,.model,.notif{grid-column:span 12}.vitals{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>SeptiSense</h1><p class="sub">Early-warning dashboard for patient P001</p><p class="sub" id="modelline"></p></div>
+  <div class="hbtns"><button id="themebtn" type="button" aria-pressed="false">Night mode</button><div id="status" class="pill">Connecting…</div></div>
+</header>
+<div id="backend" class="banner err" hidden>Backend unreachable. Start the laptop service and check BASE_URL in the script.</div>
+<div id="alertbar" class="banner warn" hidden></div>
+
+<main>
+  <section id="risk" class="panel risk" data-level="none">
+    <h2>Predicted sepsis risk</h2>
+    <div class="big" id="rp">--</div>
+    <div class="risk-detail" id="rscore">Raw model score: --</div>
+    <div class="risk-threshold" id="rthreshold">0.77 raw-score alert threshold</div>
+    <div class="gauge"><i id="rg"></i></div>
+    <div id="rtext" class="note">Waiting for a prediction.</div>
+  </section>
+
+  <section class="vitals">
+    <div class="vital" style="--c:var(--hr)"><div class="lbl">Heart rate</div><div class="val"><span id="vhr">--</span> <small>bpm</small></div><div class="q" id="qhr">No data</div></div>
+    <div class="vital" style="--c:var(--spo2)"><div class="lbl">Oxygen saturation (SpO₂)</div><div class="val"><span id="vspo2">--</span> <small>%</small></div><div class="q" id="qspo2">No data</div></div>
+    <div class="vital" style="--c:var(--temp)"><div class="lbl">Temperature</div><div class="val"><span id="vtemp">--</span> <small>°C</small></div><div class="q" id="qtemp">No data</div></div>
+  </section>
+
+  <section class="panel chart"><h2>Heart rate trend</h2><div class="chartbox"><canvas id="chr"></canvas></div></section>
+  <section class="panel chart"><h2>SpO₂ trend</h2><div class="chartbox"><canvas id="cspo2"></canvas></div></section>
+  <section class="panel chart"><h2>Temperature trend</h2><div class="chartbox"><canvas id="ctemp"></canvas></div></section>
+
+  <section class="panel alerts">
+    <h2>Alert history</h2>
+    <table><thead><tr><th>Time</th><th>Type</th><th>Message</th></tr></thead><tbody id="atable"></tbody></table>
+    <p class="note" id="aempty">No alerts yet.</p>
+    <button id="csvbtn" type="button">Download alert history (CSV)</button>
+  </section>
+
+  <section class="panel settings">
+    <h2>Alert settings</h2>
+    <label for="thhr">Heart rate above (bpm)</label><input id="thhr" type="number" value="120">
+    <label for="thspo2">SpO₂ below (%)</label><input id="thspo2" type="number" value="92">
+    <label for="thtemp">Temperature above (°C)</label><input id="thtemp" type="number" step="0.1" value="38.5">
+    <p class="note">Changes apply to the next reading.</p>
+    <button id="dropbtn" hidden>Simulate sensor dropout</button>
+  </section>
+
+  <section class="panel notif">
+    <div class="mhead"><h2>Doctor notifications</h2><span class="tag" id="nmode"></span></div>
+    <p class="note">A message goes to the on-call doctor when a threshold or high-risk alert fires. Messages stay simulated until email, SMS or WhatsApp credentials are set on the backend.</p>
+    <table><thead><tr><th>Time</th><th>Channel</th><th>To</th><th>Status</th><th>Message</th></tr></thead><tbody id="ntable"></tbody></table>
+    <p class="note" id="nempty">No notifications yet.</p>
+    <div class="row"><button id="notifybtn" type="button">Send test message to doctor</button></div>
+  </section>
+
+  <section class="panel model">
+    <div class="mhead"><h2>Model inputs</h2><span><span class="tag" id="mname"></span> <span class="tag" id="mcount"></span> <span class="tag" id="mavail"></span></span></div>
+    <p class="note">The 22 features below are built from heart rate, SpO₂ and temperature only. Respiration is not used. Rolling windows count the most recent readings, and a feature shows -- until enough valid readings exist.</p>
+    <p class="note" id="mmetrics"></p>
+    <div id="fgroups"></div>
+  </section>
+
+  <section class="panel about">
+    <h2>About this prototype</h2>
+    <p class="note">Data flow: physiological sensors → ESP32/ESP8266 node (Wi-Fi) → laptop backend and ML model → this dashboard. The risk score comes from a respiration-free CatBoost model trained on a public clinical dataset and shows the probability of a sepsis-related outcome within the stated horizon.
+    <strong>This is an educational and research prototype. It is not a clinically validated diagnostic system and must not be used for patient care.</strong></p>
+  </section>
+</main>
+
+<script>
+/* ===== Settings: change these two lines to connect the real backend ===== */
+const CONFIG = { USE_MOCK: false, BASE_URL: "http://localhost:8000", POLL_MS: 3000, OFFLINE_AFTER_S: 10, MAX_POINTS: 120 };
+// Must match Config.risk_alert_threshold on the backend (raw CatBoost score).
+const RISK_SCORE_THRESHOLD = 0.77;
+
+/* ===== Model definition (exported from the trained model; edit this JSON to change the feature list) ===== */
+const MODEL = {
+  "model_name": "SeptiSense respiration-free CatBoost",
+  "feature_count": 22,
+  "features": [
+    "HR","O2Sat","Temp","HR_change","O2Sat_change",
+    "HR_mean_3","HR_std_3","O2Sat_mean_3","O2Sat_min_3","Temp_mean_3",
+    "HR_mean_6","HR_std_6","O2Sat_mean_6","O2Sat_std_6","O2Sat_min_6","Temp_mean_6",
+    "HR_mean_12","HR_std_12","O2Sat_mean_12","O2Sat_std_12","O2Sat_min_12","Temp_mean_12"
+  ]
+};
+
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+/* ===== Mock backend (same JSON shapes as the agreed API contract) ===== */
+const mock = { hist: [], notifs: [], t: 0, drop: false, lastSeen: new Date(),
+  alerts: [{ id: 1, timestamp: new Date(Date.now() - 3600e3).toISOString(), type: "high_risk", message: "Risk above 60 percent" }] };
+function mockStep() {
+  mock.t++; const w = Math.sin(mock.t / 12);
+  const r = { timestamp: new Date().toISOString(), heart_rate: Math.round(88 + 22 * w + rnd(-3, 3)),
+    spo2: Math.round(97 - 3 * Math.max(0, w) + rnd(-1, 1)), temperature: +(37.3 + 0.9 * w + rnd(-0.1, 0.1)).toFixed(1),
+    quality: { hr_valid: true, spo2_valid: true, temp_valid: true } };
+  mock.hist.push(r); if (mock.hist.length > CONFIG.MAX_POINTS) mock.hist.shift(); mock.lastSeen = new Date();
+}
+for (let i = 0; i < 40; i++) mockStep();
+const mockApi = {
+  latest: async () => { if (!mock.drop) mockStep(); return mock.hist[mock.hist.length - 1]; },
+  history: async () => ({ readings: mock.hist }),
+  prediction: async () => { const l = mock.hist[mock.hist.length - 1], w = mock.hist.slice(-6);
+    const avg = f => w.reduce((s, r) => s + f(r), 0) / w.length;
+    const p = clamp(0.1 + (avg(r => r.heart_rate) - 85) / 150 + (avg(r => r.temperature) - 37) / 4 + (97 - avg(r => r.spo2)) / 20, 0.02, 0.98);
+    return { timestamp: l.timestamp, risk_probability: +p.toFixed(2), horizon_hours: 6, model_name: MODEL.model_name, feature_count: MODEL.feature_count }; },
+  alerts: async () => ({ alerts: mock.alerts }),
+  device: async () => ({ online: !mock.drop, last_seen: mock.lastSeen.toISOString() }),
+  notifications: async () => ({ notifications: mock.notifs }),
+  notifyTest: async () => { mockNotify("Test message: a clinician asked to send this notification."); },
+  modelInfo: async () => ({ held_out_ROC_AUC: 0.6924, held_out_average_precision: 0.0501, held_out_recall: 0.5837, held_out_precision: 0.0351, held_out_positive_prevalence: 0.0188 })
+};
+function mockNotify(text) { mock.notifs.unshift({ id: Date.now(), timestamp: new Date().toISOString(), channel: "log", recipient: "Dr. On-call", status: "simulated", message: text }); }
+
+/* ===== Real backend (all network calls live here) ===== */
+async function getJSON(path) {
+  const r = await fetch(CONFIG.BASE_URL + path);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+const realApi = {
+  latest: () => getJSON("/api/latest"), history: () => getJSON("/api/history?minutes=60"),
+  prediction: () => getJSON("/api/prediction"), alerts: () => getJSON("/api/alerts"), device: () => getJSON("/api/device-status"),
+  notifications: () => getJSON("/api/notifications").catch(() => ({ notifications: [] })),
+  notifyTest: async () => { const r = await fetch(CONFIG.BASE_URL + "/api/notify/test", { method: "POST" }); if (!r.ok) throw new Error("HTTP " + r.status); },
+  modelInfo: () => getJSON("/api/model-info")
+};
+const api = CONFIG.USE_MOCK ? mockApi : realApi;
+
+/* If a teammate renames a field, fix it here only */
+function normalizeReading(raw) {
+  const q = raw.quality || {};
+  return { time: new Date(raw.timestamp), hr: raw.heart_rate ?? raw.hr, spo2: raw.spo2 ?? raw.SpO2,
+    temp: raw.temperature ?? raw.temp, ok: { hr: q.hr_valid !== false, spo2: q.spo2_valid !== false, temp: q.temp_valid !== false } };
+}
+function riskLevel(p) { return p < 0.33 ? "low" : p < 0.66 ? "medium" : "high"; }
+
+/* ===== Charts ===== */
+const charts = {};
+function makeChart(id, color, min, max) {
+  if (typeof Chart === "undefined") return null;
+  return new Chart($(id), { type: "line", data: { labels: [], datasets: [{ data: [], borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, tension: .3, spanGaps: false }] },
+    options: { animation: false, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { x: { ticks: { maxTicksLimit: 5 } }, y: { suggestedMin: min, suggestedMax: max } } } });
+}
+function initCharts() {
+  charts.hr = makeChart("chr", "#1e8a4c", 50, 130);
+  charts.spo2 = makeChart("cspo2", "#0e7fa8", 88, 100);
+  charts.temp = makeChart("ctemp", "#c46a12", 36, 39.5);
+}
+function addPoint(rd) {
+  const label = rd.time.toLocaleTimeString();
+  for (const k of ["hr", "spo2", "temp"]) {
+    const c = charts[k]; if (!c) continue;
+    c.data.labels.push(label); c.data.datasets[0].data.push(rd.ok[k] ? rd[k] : null);
+    if (c.data.labels.length > CONFIG.MAX_POINTS) { c.data.labels.shift(); c.data.datasets[0].data.shift(); }
+    c.update("none");
+  }
+}
+
+/* ===== Model features (computed from the model JSON, so the list always matches the model) ===== */
+const FEAT_RE = /^(HR|O2Sat|Temp)(?:_(change)|_(mean|std|min)_(\d+))?$/;
+const FEAT_SRC = { HR: "hr", O2Sat: "spo2", Temp: "temp" };
+const FEAT_COLOR = { HR: "var(--hr)", O2Sat: "var(--spo2)", Temp: "var(--temp)" };
+const WINDOWS = MODEL.features.map(f => +((FEAT_RE.exec(f) || [])[4] || 0));
+const KEEP = Math.max(2, ...WINDOWS);
+const recent = [];
+function pushRecent(rd) { recent.push(rd); if (recent.length > KEEP) recent.shift(); }
+const vOf = (rd, k) => rd && rd.ok[k] && rd[k] !== undefined && rd[k] !== null ? +rd[k] : null;
+function computeFeatures() {
+  const out = {};
+  for (const name of MODEL.features) {
+    const m = FEAT_RE.exec(name); out[name] = null; if (!m) continue;
+    const k = FEAT_SRC[m[1]];
+    if (m[2]) { const a = vOf(recent[recent.length - 1], k), b = vOf(recent[recent.length - 2], k); out[name] = a === null || b === null ? null : a - b; continue; }
+    if (!m[3]) { out[name] = vOf(recent[recent.length - 1], k); continue; }
+    const xs = recent.slice(-m[4]).map(r => vOf(r, k)).filter(v => v !== null);
+    if (!xs.length) continue;
+    const mean = xs.reduce((s, v) => s + v, 0) / xs.length;
+    if (m[3] === "mean") out[name] = mean;
+    else if (m[3] === "min") out[name] = Math.min(...xs);
+    else if (xs.length > 1) out[name] = Math.sqrt(xs.reduce((s, v) => s + (v - mean) ** 2, 0) / (xs.length - 1));
+  }
+  return out;
+}
+function featureGroup(name) {
+  const m = FEAT_RE.exec(name);
+  return !m ? "Other" : m[2] ? "Change since previous reading" : !m[3] ? "Current values" : "Last " + m[4] + " readings";
+}
+function initFeatures() {
+  $("modelline").textContent = "Model: " + MODEL.model_name + " · " + MODEL.features.length + " features";
+  $("mname").textContent = MODEL.model_name;
+  const bad = MODEL.feature_count !== MODEL.features.length;
+  $("mcount").textContent = MODEL.features.length + " features" + (bad ? " (JSON says " + MODEL.feature_count + ")" : "");
+  $("mcount").className = "tag" + (bad ? " bad" : "");
+  const groups = new Map();
+  for (const name of MODEL.features) { const g = featureGroup(name); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(name); }
+  const root = $("fgroups"); root.textContent = "";
+  for (const [g, names] of groups) {
+    const box = document.createElement("div"); box.className = "fgroup";
+    const h = document.createElement("h3"); h.textContent = g; box.appendChild(h);
+    const grid = document.createElement("div"); grid.className = "fgrid";
+    for (const n of names) {
+      const d = document.createElement("div"); d.className = "feat"; d.style.setProperty("--c", FEAT_COLOR[(FEAT_RE.exec(n) || [])[1]] || "var(--off)");
+      d.innerHTML = '<div class="n"></div><div class="v na" id="f_' + n + '">--</div>'; d.firstChild.textContent = n; grid.appendChild(d);
+    }
+    box.appendChild(grid); root.appendChild(box);
+  }
+}
+function renderFeatures() {
+  const f = computeFeatures(); let have = 0;
+  for (const n of MODEL.features) {
+    const el = $("f_" + n), v = f[n]; if (!el) continue;
+    const ok = v !== null && Number.isFinite(v); if (ok) have++;
+    el.textContent = ok ? (n.startsWith("Temp") || /_std_/.test(n) || /_mean_/.test(n) || n.endsWith("_change") ? v.toFixed(2) : v.toFixed(1)) : "--";
+    el.className = "v" + (ok ? "" : " na");
+  }
+  $("mavail").textContent = have + " of " + MODEL.features.length + " available";
+}
+
+/* ===== Alerts ===== */
+let shownAlerts = []; const localAlerts = []; const active = { hr: false, spo2: false, temp: false }; let backendAlerts = [];
+function thresholds() { return { hr: +$("thhr").value, spo2: +$("thspo2").value, temp: +$("thtemp").value }; }
+function checkThresholds(rd) {
+  const th = thresholds(), now = [];
+  const rules = [["hr", rd.hr > th.hr, "Heart rate " + rd.hr + " bpm is above " + th.hr],
+    ["spo2", rd.spo2 < th.spo2, "SpO₂ " + rd.spo2 + "% is below " + th.spo2],
+    ["temp", rd.temp > th.temp, "Temperature " + rd.temp + " °C is above " + th.temp]];
+  for (const [k, hit, msg] of rules) {
+    const breach = hit && rd.ok[k];
+    if (breach) { now.push(msg); if (!active[k] && CONFIG.USE_MOCK) { localAlerts.push({ timestamp: rd.time.toISOString(), type: "threshold", message: msg }); mockNotify("Alert: " + msg); } }
+    active[k] = breach;
+  }
+  $("alertbar").hidden = now.length === 0; $("alertbar").textContent = now.join(". ");
+}
+function renderAlerts() {
+  const full = [...backendAlerts, ...localAlerts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); shownAlerts = full; const all = full.slice(0, 10);
+  const body = $("atable"); body.textContent = "";
+  for (const a of all) {
+    const tr = document.createElement("tr");
+    for (const t of [new Date(a.timestamp).toLocaleTimeString(), a.type, a.message]) { const td = document.createElement("td"); td.textContent = t; tr.appendChild(td); }
+    body.appendChild(tr);
+  }
+  $("aempty").hidden = all.length > 0;
+}
+
+/* ===== Rendering ===== */
+function renderVitals(rd) {
+  const items = [["hr", rd.hr, "bpm"], ["spo2", rd.spo2, "%"], ["temp", rd.temp, "°C"]];
+  for (const [k, v] of items) {
+    const ok = rd.ok[k] && v !== undefined && v !== null;
+    $("v" + k).textContent = ok ? v : "--";
+    $("q" + k).textContent = ok ? "Signal valid" : "Signal invalid, check the sensor";
+    $("q" + k).className = "q" + (ok ? "" : " bad");
+  }
+}
+function renderRisk(p) {
+  if (p.risk_probability === null || p.risk_probability === undefined) {
+    $("risk").dataset.level = "none";
+    $("rp").textContent = "--";
+    $("rscore").textContent = "Raw model score: --";
+    $("rthreshold").textContent = "Alert threshold: " + RISK_SCORE_THRESHOLD.toFixed(2) + " (raw score)";
+    $("rg").style.left = "0";
+    $("rtext").textContent = "Collecting data: " + (p.rows_collected || 0) + " of " + (p.rows_needed || "?") + " readings needed before the first prediction.";
+    return;
+  }
+
+  const prob = p.risk_probability;
+  const level = p.risk_level || riskLevel(prob);
+  const pos = p.risk_percentile ?? prob;
+  const pct = prob * 100;
+  const rawScore = p.risk_score === null || p.risk_score === undefined
+    ? null : Number(p.risk_score);
+  const thresholdReached = rawScore !== null && Number.isFinite(rawScore)
+    && rawScore >= RISK_SCORE_THRESHOLD;
+
+  $("risk").dataset.level = level;
+  $("rp").textContent = (pct < 10 && pct > 0 ? pct.toFixed(1) : Math.round(pct)) + "%";
+  $("rscore").textContent = rawScore === null || !Number.isFinite(rawScore)
+    ? "Raw model score: unavailable from backend"
+    : "Raw model score: " + rawScore.toFixed(4);
+
+  $("rthreshold").textContent = rawScore === null || !Number.isFinite(rawScore)
+    ? "Alert threshold: " + RISK_SCORE_THRESHOLD.toFixed(2) + " (raw score) · score unavailable"
+    : "Raw-score threshold " + RISK_SCORE_THRESHOLD.toFixed(2) + ": "
+      + (thresholdReached ? "REACHED" : "not reached");
+
+  $("rthreshold").style.color = thresholdReached ? "var(--high)" : "var(--muted)";
+  $("rg").style.left = "calc(" + clamp(pos, 0, 1) * 100 + "% - 2px)";
+
+  const rank = p.risk_percentile !== undefined
+    ? " Percentile: " + (p.risk_percentile * 100).toFixed(2) + "%." : "";
+  const src = CONFIG.USE_MOCK
+    ? " Demo mode: simulated score, not real model output."
+    : " Model: " + (p.model_name || MODEL.model_name) + ".";
+  $("rtext").textContent = "Risk level: " + level + ". Calibrated probability: "
+    + pct.toFixed(2) + "%." + rank + src;
+}
+function renderStatus(d) {
+  const age = Math.round((Date.now() - new Date(d.last_seen)) / 1000), on = d.online && age <= CONFIG.OFFLINE_AFTER_S;
+  const s = $("status"); s.className = "pill " + (on ? "on" : "off");
+  s.textContent = (on ? "Device online" : "Device offline") + ", last data " + age + " s ago";
+}
+
+function renderNotifs(list) {
+  const body = $("ntable"); body.textContent = "";
+  for (const n of list.slice(0, 8)) {
+    const tr = document.createElement("tr");
+    for (const t of [new Date(n.timestamp).toLocaleTimeString(), n.channel, n.recipient, n.status, n.message]) { const td = document.createElement("td"); td.textContent = t; tr.appendChild(td); }
+    body.appendChild(tr);
+  }
+  $("nempty").hidden = list.length > 0;
+}
+const csvCell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+function downloadAlerts() {
+  const a = document.createElement("a");
+  if (CONFIG.USE_MOCK) {
+    const rows = [["timestamp", "type", "message"], ...shownAlerts.map(x => [x.timestamp, x.type, x.message])];
+    a.href = URL.createObjectURL(new Blob([rows.map(r => r.map(csvCell).join(",")).join("\n")], { type: "text/csv" }));
+  } else a.href = CONFIG.BASE_URL + "/api/alerts.csv";
+  a.download = "alert_history_P001.csv"; document.body.appendChild(a); a.click(); a.remove();
+}
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t; $("themebtn").textContent = t === "dark" ? "Day mode" : "Night mode"; $("themebtn").setAttribute("aria-pressed", t === "dark");
+  if (typeof Chart !== "undefined") {
+    Chart.defaults.color = t === "dark" ? "#9db3b6" : "#666"; Chart.defaults.borderColor = t === "dark" ? "#2b4448" : "rgba(0,0,0,.1)";
+    for (const c of Object.values(charts)) if (c) c.update("none");
+  }
+  try { localStorage.setItem("septisense-theme", t); } catch (e) {}
+}
+async function loadModelInfo() {
+  try {
+    const m = await api.modelInfo(), f = (v, d = 2) => (v === undefined ? "n/a" : (+v).toFixed(d));
+    $("mmetrics").textContent = "Held-out results: ROC-AUC " + f(m.held_out_ROC_AUC) + ", average precision " + f(m.held_out_average_precision) + " (base rate " + f(m.held_out_positive_prevalence, 3) + "), recall " + f(m.held_out_recall) + ", precision " + f(m.held_out_precision, 3) + " at threshold 0.5. This is a weak, experimental model: expect many false alarms.";
+  } catch (e) { /* optional */ }
+}
+
+/* ===== Main loop ===== */
+let lastTime = 0;
+async function loadHistory() {
+  const h = await api.history();
+  for (const raw of h.readings) { const rd = normalizeReading(raw); addPoint(rd); pushRecent(rd); lastTime = rd.time.getTime(); }
+  renderFeatures();
+}
+async function tick() {
+  try {
+    const [l, p, a, d, n] = await Promise.all([api.latest(), api.prediction(), api.alerts(), api.device(), api.notifications()]);
+    $("backend").hidden = true;
+    const rd = normalizeReading(l);
+    renderVitals(rd); renderRisk(p); renderStatus(d);
+    if (rd.time.getTime() !== lastTime) { lastTime = rd.time.getTime(); addPoint(rd); pushRecent(rd); renderFeatures(); checkThresholds(rd); }
+    backendAlerts = a.alerts || []; renderAlerts(); renderNotifs(n.notifications || []);
+  } catch (e) {
+    $("backend").hidden = false; const s = $("status"); s.className = "pill"; s.textContent = "Backend unreachable";
+  }
+}
+(async function start() {
+  let theme = "light"; try { theme = localStorage.getItem("septisense-theme") || "light"; } catch (e) {}
+  initCharts(); initFeatures(); applyTheme(theme);
+  $("themebtn").onclick = () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  $("csvbtn").onclick = downloadAlerts;
+  $("notifybtn").onclick = async () => { try { await api.notifyTest(); tick(); } catch (e) { $("backend").hidden = false; } };
+  $("nmode").textContent = CONFIG.USE_MOCK ? "Demo: simulated" : "Live backend";
+  loadModelInfo();
+  if (CONFIG.USE_MOCK) { $("dropbtn").hidden = false; $("dropbtn").onclick = () => { mock.drop = !mock.drop; $("dropbtn").textContent = mock.drop ? "Restore sensor" : "Simulate sensor dropout"; }; }
+  try { await loadHistory(); } catch (e) { /* tick() will show the error banner */ }
+  tick(); setInterval(tick, CONFIG.POLL_MS);
+})();
+</script>
+</body>
+</html>
