@@ -1,0 +1,8 @@
+{
+  "iterations_requested": 200,
+  "depth": 4,
+  "learning_rate": 0.05,
+  "l2_leaf_reg": 10,
+  "auto_class_weights": "Balanced",
+  "thread_count": 4
+}

@@ -1,0 +1,28 @@
+{
+  "model_name": "SeptiSense respiration-free CatBoost",
+  "feature_count": 22,
+  "features": [
+    "HR",
+    "O2Sat",
+    "Temp",
+    "HR_change",
+    "O2Sat_change",
+    "HR_mean_3",
+    "HR_std_3",
+    "O2Sat_mean_3",
+    "O2Sat_min_3",
+    "Temp_mean_3",
+    "HR_mean_6",
+    "HR_std_6",
+    "O2Sat_mean_6",
+    "O2Sat_std_6",
+    "O2Sat_min_6",
+    "Temp_mean_6",
+    "HR_mean_12",
+    "HR_std_12",
+    "O2Sat_mean_12",
+    "O2Sat_std_12",
+    "O2Sat_min_12",
+    "Temp_mean_12"
+  ]
+}

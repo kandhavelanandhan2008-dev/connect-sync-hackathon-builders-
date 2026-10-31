@@ -1,0 +1,7 @@
+flask>=3.0
+catboost>=1.2
+numpy
+requests
+# only for make_calibration.py and tests:
+pandas
+scikit-learn
